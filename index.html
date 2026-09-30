@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Confirma tu asistencia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --tinta: #1E2B26;
+    --verde: #2D6A55;
+    --verde-oscuro: #1F4D3D;
+    --salvia: #EEF3EF;
+    --linea: #D3DDD6;
+    --suave: #56615B;
+    --error: #9B2C1F;
+    --papel: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--papel); color: var(--tinta);
+    font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 30rem; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
+
+  .pareja {
+    font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    font-weight: 600; font-size: clamp(2.4rem, 11vw, 3.4rem); line-height: 1.02;
+    letter-spacing: -0.01em; margin: 0 0 0.6rem; color: var(--verde-oscuro);
+  }
+  .fecha { font-size: 1.1rem; margin: 0; }
+  .detalles {
+    white-space: pre-line; color: var(--suave); margin: 1.25rem 0 0;
+    padding-left: 0.9rem; border-left: 2px solid var(--linea);
+  }
+  hr { border: 0; border-top: 1px solid var(--linea); margin: 2rem 0; }
+
+  h2 { font-size: 1.2rem; margin: 0 0 0.35rem; }
+  .ayuda { color: var(--suave); margin: 0 0 1.25rem; font-size: 0.97rem; }
+
+  .opciones { display: grid; gap: 0.6rem; margin-bottom: 1.5rem; }
+  .opcion {
+    display: flex; align-items: center; gap: 0.75rem; width: 100%;
+    padding: 1rem 1.1rem; border: 1.5px solid var(--linea); border-radius: 12px;
+    background: var(--papel); color: var(--tinta); font: inherit; font-weight: 600;
+    text-align: left; cursor: pointer;
+  }
+  .opcion[aria-pressed="true"] { border-color: var(--verde); background: var(--salvia); }
+  .opcion .marca {
+    width: 1.3rem; height: 1.3rem; border-radius: 50%; border: 1.5px solid var(--linea);
+    flex: none; display: grid; place-items: center;
+  }
+  .opcion[aria-pressed="true"] .marca { border-color: var(--verde); background: var(--verde); }
+  .opcion[aria-pressed="true"] .marca::after {
+    content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: #fff;
+  }
+
+  .campo { margin-bottom: 1.35rem; }
+  .campo > label, .campo > .etiqueta { display: block; font-weight: 600; margin-bottom: 0.4rem; }
+  .contador { display: flex; align-items: center; gap: 0.25rem; }
+  .contador button {
+    width: 2.9rem; height: 2.9rem; border-radius: 50%; border: 1.5px solid var(--linea);
+    background: var(--papel); font-size: 1.4rem; line-height: 1; color: var(--verde-oscuro);
+    cursor: pointer;
+  }
+  .contador button:disabled { opacity: 0.35; cursor: default; }
+  .contador output { min-width: 3rem; text-align: center; font-size: 1.35rem; font-weight: 600; }
+  .contador .de { color: var(--suave); margin-left: 0.4rem; }
+  textarea {
+    width: 100%; min-height: 5.5rem; padding: 0.75rem 0.85rem; resize: vertical;
+    border: 1.5px solid var(--linea); border-radius: 10px; font: inherit; color: inherit;
+  }
+
+  .enviar {
+    width: 100%; padding: 1rem; border: 0; border-radius: 12px; cursor: pointer;
+    background: var(--verde); color: #fff; font: inherit; font-weight: 700; font-size: 1.05rem;
+  }
+  .enviar:hover { background: var(--verde-oscuro); }
+  .enviar:disabled { opacity: 0.6; cursor: default; }
+  .enlace {
+    background: none; border: 0; padding: 0; color: var(--verde); font: inherit;
+    text-decoration: underline; cursor: pointer;
+  }
+  .error { color: var(--error); font-weight: 600; margin: 0 0 1rem; }
+  .gracias { font-size: 1.15rem; }
+  [hidden] { display: none !important; }
+
+  button:focus-visible, textarea:focus-visible {
+    outline: 3px solid var(--verde); outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .opcion, .enviar { transition: background-color .15s, border-color .15s; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p id="estado-carga">Cargando tu invitación…</p>
+
+  <section id="no-encontrada" hidden>
+    <h2>No encontramos esta invitación</h2>
+    <p class="ayuda">Revisa que el enlace esté completo, tal como te llegó por WhatsApp.
+      Si sigue sin abrir, escríbeles a los novios.</p>
+  </section>
+
+  <section id="invitacion" hidden>
+    <h1 class="pareja" id="pareja"></h1>
+    <p class="fecha" id="fecha"></p>
+    <p class="detalles" id="detalles" hidden></p>
+    <hr>
+
+    <div id="formulario">
+      <h2 id="saludo"></h2>
+      <p class="ayuda" id="lugares"></p>
+      <p class="ayuda" id="plazo" hidden></p>
+
+      <div class="opciones" role="group" aria-label="¿Asistirán?">
+        <button type="button" class="opcion" id="si" aria-pressed="false">
+          <span class="marca" aria-hidden="true"></span><span id="texto-si">Sí, ahí estaremos</span>
+        </button>
+        <button type="button" class="opcion" id="no" aria-pressed="false">
+          <span class="marca" aria-hidden="true"></span><span id="texto-no">No podremos ir</span>
+        </button>
+      </div>
+
+      <div id="detalle-si" hidden>
+        <div class="campo" id="campo-cantidad">
+          <span class="etiqueta" id="et-cantidad">¿Cuántos van?</span>
+          <div class="contador" role="group" aria-labelledby="et-cantidad">
+            <button type="button" data-cambiar="cantidad" data-paso="-1" aria-label="Uno menos">−</button>
+            <output id="cantidad" aria-live="polite">1</output>
+            <button type="button" data-cambiar="cantidad" data-paso="1" aria-label="Uno más">+</button>
+            <span class="de" id="de-cantidad"></span>
+          </div>
+        </div>
+        <div class="campo">
+          <span class="etiqueta" id="et-ninos">De ellos, ¿cuántos son niños?</span>
+          <div class="contador" role="group" aria-labelledby="et-ninos">
+            <button type="button" data-cambiar="ninos" data-paso="-1" aria-label="Uno menos">−</button>
+            <output id="ninos" aria-live="polite">0</output>
+            <button type="button" data-cambiar="ninos" data-paso="1" aria-label="Uno más">+</button>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="restricciones">¿Alguien necesita un menú especial o tiene alguna alergia?</label>
+          <textarea id="restricciones" maxlength="500"
+            placeholder="Por ejemplo: uno vegetariano, uno alérgico a los mariscos"></textarea>
+        </div>
+      </div>
+
+      <div class="campo" id="campo-mensaje" hidden>
+        <label for="mensaje">Un mensaje para los novios <span style="font-weight:400;color:var(--suave)">(opcional)</span></label>
+        <textarea id="mensaje" maxlength="1000"></textarea>
+      </div>
+
+      <p class="error" id="error" role="alert" hidden></p>
+      <button type="button" class="enviar" id="enviar" hidden>Enviar respuesta</button>
+    </div>
+
+    <div id="listo" hidden>
+      <p class="gracias" id="texto-listo"></p>
+      <button type="button" class="enlace" id="cambiar">Cambiar mi respuesta</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ============ Configuración ============
+  // Supabase > Project Settings > API Keys. Usa la clave PÚBLICA
+  // (publishable, empieza con sb_publishable_, o la "anon" antigua).
+  // NUNCA pongas aquí la clave secreta: esta página la puede ver cualquiera.
+  const SUPABASE_URL = "https://xyjfqhjmljulbeofgked.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_27hWBXB7HzCQu_JQBZhrDg_40__S8Lk";
+  // ======================================
+
+  const $ = (id) => document.getElementById(id);
+  const codigo = new URLSearchParams(location.search).get("c");
+  let inv = null;
+  let asiste = null;
+  const valores = { cantidad: 1, ninos: 0 };
+
+  async function rpc(funcion, datos) {
+    const headers = { "Content-Type": "application/json", apikey: SUPABASE_KEY };
+    if (SUPABASE_KEY.startsWith("eyJ")) headers.Authorization = "Bearer " + SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${funcion}`, {
+      method: "POST", headers, body: JSON.stringify(datos),
+    });
+    const cuerpo = await r.json().catch(() => null);
+    if (!r.ok) throw new Error((cuerpo && cuerpo.message) || "error");
+    return cuerpo;
+  }
+
+  function fechaLarga(iso) {
+    const [a, m, d] = iso.split("-").map(Number);
+    return new Intl.DateTimeFormat("es-PE", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
+    }).format(new Date(Date.UTC(a, m - 1, d)));
+  }
+
+  function mostrarContadores() {
+    const max = inv.personas;
+    valores.cantidad = Math.min(Math.max(valores.cantidad, 1), max);
+    valores.ninos = Math.min(Math.max(valores.ninos, 0), valores.cantidad);
+    $("cantidad").textContent = valores.cantidad;
+    $("ninos").textContent = valores.ninos;
+    $("de-cantidad").textContent = `de ${max}`;
+    document.querySelectorAll("[data-cambiar]").forEach((b) => {
+      const campo = b.dataset.cambiar, paso = Number(b.dataset.paso);
+      const tope = campo === "cantidad" ? max : valores.cantidad;
+      const minimo = campo === "cantidad" ? 1 : 0;
+      b.disabled = paso < 0 ? valores[campo] <= minimo : valores[campo] >= tope;
+    });
+  }
+
+  function elegir(valor) {
+    asiste = valor;
+    $("si").setAttribute("aria-pressed", String(valor === true));
+    $("no").setAttribute("aria-pressed", String(valor === false));
+    $("detalle-si").hidden = valor !== true;
+    $("campo-mensaje").hidden = false;
+    $("enviar").hidden = false;
+    $("error").hidden = true;
+  }
+
+  function mostrarListo() {
+    const ya = inv.estado === "Confirmado";
+    let texto;
+    if (ya) {
+      const n = inv.asistentes || inv.personas;
+      texto = `¡Gracias! Registramos que van ${n} ${n === 1 ? "persona" : "personas"}`;
+      if (inv.ninos) texto += ` (${inv.ninos} ${inv.ninos === 1 ? "niño" : "niños"})`;
+      texto += ". Nos vemos en la boda.";
+    } else {
+      texto = "Gracias por avisarnos. Te vamos a extrañar.";
+    }
+    $("texto-listo").textContent = texto;
+    $("formulario").hidden = true;
+    $("listo").hidden = false;
+  }
+
+  function mostrarFormulario() {
+    $("formulario").hidden = false;
+    $("listo").hidden = true;
+    if (inv.estado === "Confirmado") {
+      valores.cantidad = inv.asistentes || inv.personas;
+      valores.ninos = inv.ninos || 0;
+      $("restricciones").value = inv.restricciones || "";
+      elegir(true);
+    } else if (inv.estado === "No asiste") {
+      elegir(false);
+    }
+    $("mensaje").value = inv.mensaje || "";
+    mostrarContadores();
+  }
+
+  function pintar() {
+    $("pareja").textContent = inv.pareja;
+    const f = fechaLarga(inv.fecha);
+    $("fecha").textContent = f.charAt(0).toUpperCase() + f.slice(1);
+    if (inv.detalles) { $("detalles").textContent = inv.detalles; $("detalles").hidden = false; }
+    $("saludo").textContent = `¡Hola, ${inv.nombre}!`;
+    const p = inv.personas;
+    $("lugares").textContent = p === 1
+      ? "Tenemos un lugar reservado para ti. ¿Nos acompañas?"
+      : `Tenemos ${p} lugares reservados para ustedes. ¿Nos acompañan?`;
+    if (p === 1) {
+      $("campo-cantidad").hidden = true;
+      $("texto-si").textContent = "Sí, ahí estaré";
+      $("texto-no").textContent = "No podré ir";
+    }
+    if (inv.confirmar_hasta) {
+      $("plazo").textContent = `Por favor confirma antes del ${fechaLarga(inv.confirmar_hasta)}.`;
+      $("plazo").hidden = false;
+    }
+    document.title = `${inv.pareja} · Confirma tu asistencia`;
+    $("estado-carga").hidden = true;
+    $("invitacion").hidden = false;
+    if (inv.respondido_en) mostrarListo(); else mostrarFormulario();
+  }
+
+  const mensajesError = {
+    cantidad_invalida: "Revisa cuántos van.",
+    ninos_invalido: "Los niños no pueden ser más que los que van.",
+    boda_pasada: "La fecha de la boda ya pasó; ya no se pueden cambiar respuestas.",
+    invitacion_no_encontrada: "No encontramos esta invitación.",
+  };
+
+  async function enviar() {
+    if (asiste === null) return;
+    const boton = $("enviar");
+    boton.disabled = true;
+    boton.textContent = "Enviando…";
+    $("error").hidden = true;
+    try {
+      inv = await rpc("responder_invitacion", {
+        p_codigo: codigo,
+        p_asiste: asiste,
+        p_cantidad: asiste ? (inv.personas === 1 ? 1 : valores.cantidad) : null,
+        p_ninos: asiste ? valores.ninos : null,
+        p_restricciones: asiste ? $("restricciones").value : null,
+        p_mensaje: $("mensaje").value,
+      });
+      mostrarListo();
+    } catch (e) {
+      $("error").textContent = mensajesError[e.message]
+        || "No pudimos enviar tu respuesta. Revisa tu conexión e inténtalo otra vez.";
+      $("error").hidden = false;
+    } finally {
+      boton.disabled = false;
+      boton.textContent = "Enviar respuesta";
+    }
+  }
+
+  $("si").addEventListener("click", () => { elegir(true); mostrarContadores(); });
+  $("no").addEventListener("click", () => elegir(false));
+  $("enviar").addEventListener("click", enviar);
+  $("cambiar").addEventListener("click", mostrarFormulario);
+  document.querySelectorAll("[data-cambiar]").forEach((b) =>
+    b.addEventListener("click", () => {
+      valores[b.dataset.cambiar] += Number(b.dataset.paso);
+      mostrarContadores();
+    }));
+
+  (async () => {
+    if (!codigo) {
+      $("estado-carga").hidden = true;
+      $("no-encontrada").hidden = false;
+      return;
+    }
+    try {
+      inv = await rpc("obtener_invitacion", { p_codigo: codigo });
+    } catch (e) {
+      inv = null;
+    }
+    if (!inv) {
+      $("estado-carga").hidden = true;
+      $("no-encontrada").hidden = false;
+      return;
+    }
+    pintar();
+  })();
+</script>
+</body>
+</html>
