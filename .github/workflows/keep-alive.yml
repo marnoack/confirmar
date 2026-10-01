@@ -1,0 +1,41 @@
+name: Keep Alive - Streamlit + Supabase
+
+# Se ejecuta automáticamente cada 8 horas (bien por debajo del límite de
+# 12 horas de Streamlit Community Cloud, y del límite de 7 días de Supabase).
+# También se puede correr manualmente desde la pestaña "Actions" de GitHub.
+on:
+  schedule:
+    - cron: "0 */8 * * *"
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: Visit Streamlit app with a real browser
+        env:
+          STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
+        run: python .github/scripts/wake_streamlit.py
+
+      - name: Ping Supabase
+        timeout-minutes: 1
+        run: |
+          echo "Consultando Supabase para evitar la pausa por inactividad..."
+          curl -s --max-time 30 -o /dev/null -w "Status: %{http_code}\n" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+
