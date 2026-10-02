@@ -1,45 +1,48 @@
-"""
-Visita la app de Streamlit con un navegador real (headless) para que la
-conexión WebSocket se establezca de verdad y cuente como tráfico genuino.
-Si la app está dormida, detecta el botón de "despertar" y hace clic en él.
+"""Abre la app en un navegador real para que Streamlit Cloud no la duerma.
+
+Una simple petición (curl) no basta: Streamlit solo cuenta visitas que abren
+la app en un navegador. Si ya está dormida, toca el botón para despertarla.
 """
 import os
+import re
 import sys
+
 from playwright.sync_api import sync_playwright
 
-URL = os.environ["STREAMLIT_APP_URL"]
+URL = os.environ.get("STREAMLIT_APP_URL", "").strip()
+if not URL.startswith("http"):
+    sys.exit("Falta el secreto STREAMLIT_APP_URL (ej. https://nuestraboda.streamlit.app).")
+TEXTO_DE_LA_APP = "Nuestra boda"  # aparece en la pantalla de inicio de sesión
 
 
-def main():
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page()
-
-        print(f"Visitando {URL} ...")
-        page.goto(URL, wait_until="networkidle", timeout=60000)
-
-        # Si la app está dormida, Streamlit Cloud muestra un botón para despertarla.
-        boton_despertar = page.get_by_text("get this app back up", exact=False)
-        try:
-            if boton_despertar.is_visible(timeout=5000):
-                print("La app estaba dormida. Haciendo clic para despertarla...")
-                boton_despertar.click()
-                # Espera a que el contenedor se reinicie y la app cargue de verdad.
-                page.wait_for_timeout(15000)
-                page.wait_for_load_state("networkidle", timeout=90000)
-        except Exception:
-            # No apareció el botón -> la app ya estaba despierta, todo bien.
-            pass
-
-        print("Título final de la página:", page.title())
-        browser.close()
+def app_cargada(pagina):
+    return any(frame.get_by_text(TEXTO_DE_LA_APP).count() for frame in pagina.frames)
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        print(f"Error al visitar la app: {e}")
-        sys.exit(1)
+with sync_playwright() as p:
+    navegador = p.chromium.launch()
+    pagina = navegador.new_page()
+    pagina.goto(URL, wait_until="domcontentloaded", timeout=90_000)
+    pagina.wait_for_timeout(10_000)
 
+    boton = pagina.get_by_role("button", name=re.compile("get this app back up", re.I))
+    if boton.count():
+        print("La app estaba dormida: despertándola…")
+        boton.first.click()
+        espera_maxima = 180  # segundos: al despertar puede tardar
+    else:
+        print("La app estaba despierta.")
+        espera_maxima = 60
 
+    for _ in range(espera_maxima // 5):
+        if app_cargada(pagina):
+            print("La app cargó correctamente.")
+            pagina.wait_for_timeout(15_000)  # se queda un momento, como una visita real
+            navegador.close()
+            sys.exit(0)
+        pagina.wait_for_timeout(5_000)
+
+    pagina.screenshot(path="error.png", full_page=True)
+    print("La app no terminó de cargar. Revísala en el navegador.")
+    navegador.close()
+    sys.exit(1)

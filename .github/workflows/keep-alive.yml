@@ -1,41 +1,44 @@
 name: Keep Alive - Streamlit + Supabase
 
-# Se ejecuta automáticamente cada 8 horas (bien por debajo del límite de
-# 12 horas de Streamlit Community Cloud, y del límite de 7 días de Supabase).
-# También se puede correr manualmente desde la pestaña "Actions" de GitHub.
 on:
   schedule:
-    - cron: "0 */8 * * *"
-  workflow_dispatch:
+    - cron: "17 */6 * * *"   # cada 6 horas (hora UTC); GitHub puede demorarlo unos minutos
+  workflow_dispatch:          # botón "Run workflow" para probarlo a mano
 
 jobs:
-  keep-alive:
+  supabase:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Hacer una consulta a la base de datos
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          # Llama a la función pública con un código que no existe: no lee ni
+          # cambia datos de nadie, pero cuenta como actividad del proyecto.
+          headers=(-H "apikey: $SUPABASE_KEY" -H "Content-Type: application/json")
+          if [[ "$SUPABASE_KEY" == eyJ* ]]; then
+            headers+=(-H "Authorization: Bearer $SUPABASE_KEY")  # clave "anon" antigua
+          fi
+          estado=$(curl -s -o respuesta.txt -w "%{http_code}" -X POST \
+            "$SUPABASE_URL/rest/v1/rpc/obtener_invitacion" "${headers[@]}" \
+            -d '{"p_codigo": "ping"}')
+          echo "Supabase respondió $estado: $(cat respuesta.txt)"
+          test "$estado" = "200"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+  streamlit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-
-      - name: Install Playwright
+          python-version: "3.12"
+      - name: Instalar navegador
         run: |
           pip install playwright
-          playwright install --with-deps chromium
-
-      - name: Visit Streamlit app with a real browser
+          python -m playwright install --with-deps chromium
+      - name: Abrir la app (y despertarla si está dormida)
         env:
           STREAMLIT_APP_URL: ${{ secrets.STREAMLIT_APP_URL }}
         run: python .github/scripts/wake_streamlit.py
-
-      - name: Ping Supabase
-        timeout-minutes: 1
-        run: |
-          echo "Consultando Supabase para evitar la pausa por inactividad..."
-          curl -s --max-time 30 -o /dev/null -w "Status: %{http_code}\n" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/${{ secrets.SUPABASE_TABLE }}?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
-
