@@ -1,4 +1,4 @@
-name: Keep Alive - Streamlit + Supabase
+name: Bodas Keep Alive App - Streamlit + Supabase
 
 on:
   schedule:
