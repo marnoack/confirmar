@@ -27,6 +27,10 @@
   }
   main { max-width: 30rem; margin: 0 auto; padding: 2.5rem 1.25rem 3rem; }
 
+  .imagen {
+    display: block; width: 100%; height: auto; margin: 0 0 1.75rem;
+    border-radius: 12px; border: 1px solid var(--linea);
+  }
   .pareja {
     font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
     font-weight: 600; font-size: clamp(2.4rem, 11vw, 3.4rem); line-height: 1.02;
@@ -108,6 +112,9 @@
   </section>
 
   <section id="invitacion" hidden>
+    <a id="enlace-imagen" target="_blank" rel="noopener" hidden>
+      <img class="imagen" id="imagen" alt="">
+    </a>
     <h1 class="pareja" id="pareja"></h1>
     <p class="fecha" id="fecha"></p>
     <p class="detalles" id="detalles" hidden></p>
@@ -262,6 +269,12 @@
     const f = fechaLarga(inv.fecha);
     $("fecha").textContent = f.charAt(0).toUpperCase() + f.slice(1);
     if (inv.detalles) { $("detalles").textContent = inv.detalles; $("detalles").hidden = false; }
+    if (inv.imagen) {
+      $("imagen").src = inv.imagen;
+      $("imagen").alt = `Invitación a la boda de ${inv.pareja}`;
+      $("enlace-imagen").href = inv.imagen;  // tocarla la abre en grande
+      $("enlace-imagen").hidden = false;
+    }
     $("saludo").textContent = `¡Hola, ${inv.nombre}!`;
     const p = inv.personas;
     $("lugares").textContent = p === 1
